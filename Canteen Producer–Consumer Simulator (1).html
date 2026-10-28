@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Canteen Producer–Consumer Simulator</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=Figtree:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#eef2ef;--card:#fff;--ink:#1d2b2a;--mute:#5d6e6b;--line:#d3dcd8;--prod:#c9740a;--prodbg:#fdf0dc;--cons:#0f7b72;--consbg:#dcf3ef;--bad:#c62f3b;--badbg:#fde5e7;--ok:#2d8a4e;--slot:#f6f8f7;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121917;--card:#1a2321;--ink:#e6efec;--mute:#93a5a1;--line:#2c3935;--prod:#f0a54a;--prodbg:#3a2c16;--cons:#4fd1c3;--consbg:#12352f;--bad:#ff6b76;--badbg:#401a1e;--ok:#5fd18a;--slot:#141c1a}}
+:root[data-theme="dark"]{--bg:#121917;--card:#1a2321;--ink:#e6efec;--mute:#93a5a1;--line:#2c3935;--prod:#f0a54a;--prodbg:#3a2c16;--cons:#4fd1c3;--consbg:#12352f;--bad:#ff6b76;--badbg:#401a1e;--ok:#5fd18a;--slot:#141c1a}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Figtree,system-ui,sans-serif}
+h1,h2{font-family:'Bricolage Grotesque',Georgia,serif;margin:0}
+.wrap{max-width:1100px;margin:0 auto;padding:20px 16px 40px}
+h1{font-size:clamp(24px,4vw,34px);line-height:1.1}
+.sub{color:var(--mute);margin:6px 0 18px;max-width:70ch}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+h2{font-size:17px;margin-bottom:10px}
+.controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px 18px;align-items:end}
+label{display:block;font-size:13px;color:var(--mute)}
+label b{color:var(--ink);float:right}
+input[type=range]{width:100%;accent-color:var(--cons)}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+button{font:inherit;font-weight:600;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:8px 14px;border-radius:8px;cursor:pointer}
+button.main{background:var(--cons);color:#fff;border-color:var(--cons)}
+button:focus-visible,input:focus-visible{outline:3px solid var(--prod);outline-offset:2px}
+.mode{display:flex;gap:0;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.mode button{border:0;border-radius:0;flex:1}
+.mode button.on{background:var(--ink);color:var(--bg)}
+.mode button.on.bad{background:var(--bad);color:#fff}
+.stage{display:grid;grid-template-columns:1fr 1.5fr 1fr;gap:14px}
+@media(max-width:820px){.stage{grid-template-columns:1fr}}
+.col h2{display:flex;justify-content:space-between}
+.w{border-radius:8px;padding:8px 10px;margin-bottom:8px;border-left:5px solid;display:flex;justify-content:space-between;gap:8px;align-items:center;font-size:14px}
+.w.P{background:var(--prodbg);border-color:var(--prod)}
+.w.C{background:var(--consbg);border-color:var(--cons)}
+.tag{font-size:12px;font-weight:600;padding:2px 8px;border-radius:99px;background:var(--card);border:1px solid var(--line);white-space:nowrap}
+.tag.blk{background:var(--badbg);color:var(--bad);border-color:var(--bad)}
+.tag.crit{background:var(--ink);color:var(--bg)}
+.counter{border:2px solid var(--line);border-radius:12px;padding:12px;background:var(--slot)}
+.slots{display:grid;grid-template-columns:repeat(auto-fill,minmax(74px,1fr));gap:8px}
+.slot{position:relative;height:74px;border:2px dashed var(--line);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:12px;color:var(--mute);background:var(--card)}
+.slot.f{border:2px solid var(--prod);background:var(--prodbg);color:var(--ink)}
+.slot .e{font-size:26px;line-height:1}
+.slot i{position:absolute;top:-9px;font-style:normal;font-size:11px;font-weight:600;padding:0 6px;border-radius:99px;color:#fff}
+.slot i.in{left:6px;background:var(--prod)}.slot i.out{right:6px;background:var(--cons)}
+.sems{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
+@media(max-width:520px){.sems{grid-template-columns:repeat(2,1fr)}}
+.sem{border:1px solid var(--line);border-radius:8px;padding:6px 8px;background:var(--card)}
+.sem small{display:block;color:var(--mute);font-size:11.5px}
+.sem strong{font-family:'Bricolage Grotesque',serif;font-size:22px}
+.sem.mis strong{color:var(--bad)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}
+.stat{padding:8px 10px;border-radius:8px;background:var(--slot);border:1px solid var(--line)}
+.stat small{color:var(--mute);display:block;font-size:12px}
+.stat strong{font-size:22px;font-family:'Bricolage Grotesque',serif}
+.stat.err strong{color:var(--bad)}
+#log{height:210px;overflow:auto;font:13px/1.55 ui-monospace,Menlo,monospace;background:var(--slot);border:1px solid var(--line);border-radius:8px;padding:8px}
+#log div{padding:1px 0}
+.lp{color:var(--prod)}.lc{color:var(--cons)}.lb{color:var(--mute)}.le{color:var(--bad);font-weight:700}
+.note{font-size:13.5px;color:var(--mute)}
+.note b{color:var(--ink)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:820px){.two{grid-template-columns:1fr}}
+.two .panel{margin-bottom:0}.twowrap{margin-bottom:14px}
+.chart{width:100%;height:130px;background:var(--slot);border:1px solid var(--line);border-radius:8px;display:block}
+.leg{font-size:13px;color:var(--mute);margin-top:6px;display:flex;gap:14px;flex-wrap:wrap}
+.leg i{display:inline-block;width:14px;height:4px;border-radius:2px;margin-right:5px;vertical-align:middle}
+.pc{margin-bottom:10px}.pc h3{margin:0 0 4px;font-size:13px;color:var(--mute);font-weight:600}
+.ln{font:12.5px/1.4 ui-monospace,Menlo,monospace;padding:3px 8px;border-radius:5px;display:flex;justify-content:space-between;gap:8px;border-left:3px solid transparent}
+.ln.hot{background:var(--prodbg);border-color:var(--prod)}.pc.cc .ln.hot{background:var(--consbg);border-color:var(--cons)}
+.ln.hot.bad{background:var(--badbg);border-color:var(--bad)}
+.ln em{font-style:normal;font-family:Figtree,sans-serif;font-size:11.5px;font-weight:600;color:var(--ink)}
+.about{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;font-size:14px}
+.about div{border-left:4px solid var(--line);padding-left:10px}.about b{display:block;font-family:'Bricolage Grotesque',serif;font-size:15px}
+.about code{font-size:12.5px;color:var(--prod)}
+.tw{overflow-x:auto}table{border-collapse:collapse;width:100%;min-width:560px;font-size:14px}
+th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line)}th{color:var(--mute);font-weight:600;font-size:13px}
+.pass{color:var(--ok);font-weight:700}.fail{color:var(--bad);font-weight:700}
+@keyframes pop{0%{transform:scale(.6);opacity:.2}60%{transform:scale(1.12)}100%{transform:scale(1);opacity:1}}
+.slot.new{animation:pop .45s ease-out;box-shadow:0 0 0 3px var(--prod)}
+@media(prefers-reduced-motion:reduce){.slot.new{animation:none}}
+</style></head><body><div class="wrap">
+<h1>College canteen order counter</h1>
+<p class="sub">Staff (producers) place food orders on a limited counter. Students (consumers) pick them up. Switch synchronization off to watch race conditions corrupt the counter.</p>
+<div class="panel"><h2>Project brief: Producer–Consumer problem</h2><div class="about">
+<div style="border-color:var(--prod)"><b>Producer</b>Canteen staff cook food orders and place them on a counter with a fixed number of slots.</div>
+<div style="border-color:var(--cons)"><b>Consumer</b>Students pick up orders from the counter. Each order is served to exactly one student.</div>
+<div><b>Buffer full / empty</b><code>empty</code> semaphore makes staff wait when full. <code>full</code> semaphore makes students wait when empty.</div>
+<div><b>Race condition</b>A <code>mutex</code> allows one person at a time to change the counter, so no order is lost or taken twice.</div>
+</div></div>
+
+<div class="panel">
+<div class="controls">
+<label>Counter size <b id="vN"></b><input type="range" id="N" min="2" max="10" value="5"></label>
+<label>Canteen staff <b id="vP"></b><input type="range" id="P" min="1" max="5" value="2"></label>
+<label>Students <b id="vC"></b><input type="range" id="C" min="1" max="6" value="3"></label>
+<label>Cooking speed <b id="vPR"></b><input type="range" id="PR" min="1" max="10" value="5"></label>
+<label>Eating speed <b id="vCR"></b><input type="range" id="CR" min="1" max="10" value="5"></label>
+<label>Simulation speed <b id="vSP"></b><input type="range" id="SP" min="1" max="10" value="5"></label>
+</div>
+<div class="btns">
+<div class="mode" role="group" aria-label="Synchronization"><button id="mSync" class="on">Semaphores + mutex</button><button id="mRace">No synchronization</button></div>
+<button class="main" id="run">Start</button><button id="step">Step once</button><button id="reset">Reset</button></div><div class="btns"><span class="note" style="align-self:center">Try a scenario:</span><button onclick="preset(3,4,1,10,2,true)">Buffer full</button><button onclick="preset(5,1,5,2,10,true)">Buffer empty</button><button onclick="preset(3,3,3,6,6,false)">Race condition</button><button onclick="preset(5,2,3,5,5,true)">Balanced</button>
+</div>
+</div>
+
+<div class="stage">
+<div class="panel col"><h2>Canteen staff <span class="tag" id="pc"></span></h2><div id="prods"></div></div>
+<div class="panel col"><h2>Order counter <span class="tag" id="cap"></span></h2>
+<div class="counter"><div class="slots" id="slots"></div></div>
+<div class="sems" id="sems"></div></div>
+<div class="panel col"><h2>Students <span class="tag" id="cc"></span></h2><div id="cons"></div></div>
+</div>
+
+<div class="two twowrap"><div class="panel"><h2>Counter occupancy over time</h2><svg class="chart" id="chart" viewBox="0 0 600 130" preserveAspectRatio="none"></svg><div class="leg"><span><i style="background:var(--prod)"></i>real orders</span><span id="legc"></span><span><i style="background:var(--line)"></i>capacity</span></div></div><div class="panel"><h2>What each person is running</h2><div id="code"></div></div></div>
+<div class="panel"><h2>Automated test</h2><p class="note" style="margin:0 0 10px">Runs 300 steps in each mode with your current settings. A run passes when no race occurs and orders cooked − orders picked up equals orders on the counter.</p><button class="main" onclick="autotest()">Run test on both modes</button><div class="tw" id="testout" style="margin-top:10px"></div></div>
+<div class="panel"><h2>Results</h2><div class="stats" id="stats"></div></div>
+<div class="panel"><h2>Event log</h2><div id="log" aria-live="polite"></div>
+<p class="note" id="explain"></p></div>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const FOOD=['🍛','🥪','🍜','🥟','🍕','🍔','🥘','🍚','🫓','☕'];
+const NAMES_P=['Ramesh','Sunita','Kiran','Dev','Meena'],NAMES_C=['Aarav','Isha','Rohan','Priya','Sameer','Neha'];
+let S,timer=null,sync=true;
+const rnd=n=>Math.floor(Math.random()*n);
+const ctl={N:5,P:2,C:3,PR:5,CR:5,SP:5};
+function readCtl(){for(const k in ctl){ctl[k]=+$(k).value;$('v'+k).textContent=ctl[k]}}
+function wait(rate){return 1+rnd(Math.max(1,13-rate))}
+function init(){
+ readCtl();
+ S={hist:[],buf:Array(ctl.N).fill(null),inI:0,outI:0,count:0,empty:ctl.N,full:0,mutex:null,nextId:1,t:0,
+  prod:0,cons:0,blkFull:0,blkEmpty:0,races:0,log:[],w:[]};
+ for(let i=0;i<ctl.P;i++)S.w.push({id:'P'+i,type:'P',name:NAMES_P[i],st:'work',tm:wait(ctl.PR),bl:false});
+ for(let i=0;i<ctl.C;i++)S.w.push({id:'C'+i,type:'C',name:NAMES_C[i],st:'work',tm:wait(ctl.CR),bl:false});
+ log('Canteen opened. Counter holds '+ctl.N+' orders. Mode: '+(sync?'synchronized':'UNSYNCHRONIZED'),'lb');
+ render();
+}
+function log(m,c){S.log.push({m,c,t:S.t});if(S.log.length>120)S.log.shift()}
+function actual(){return S.buf.filter(x=>x).length}
+function block(w,kind){if(!w.bl){w.bl=true;kind==='full'?S.blkFull++:S.blkEmpty++;
+ log(`${w.name} must wait: counter ${kind==='full'?'is full':'is empty'}`,'lb')}}
+function stepP(w){
+ if(w.st==='work'){if(--w.tm>0)return;w.st='wait';w.item={id:S.nextId++,e:FOOD[rnd(FOOD.length)]};}
+ if(w.st==='wait'){
+  if(sync){
+   if(S.empty>0){S.empty--;w.bl=false;w.st='lock';log(`${w.name} wait(empty) → empty=${S.empty}`,'lp')}else{block(w,'full');return}
+  }else{
+   if(S.count>=ctl.N){block(w,'full');return}
+   w.bl=false;w.local=S.count;w.slot=S.inI;w.st='crit';w.tm=1+rnd(3);
+   log(`${w.name} reads count=${w.local}, slot=${w.slot} (not locked)`,'lp');return
+  }
+ }
+ if(w.st==='lock'){
+  if(S.mutex===null){S.mutex=w.id;w.st='crit';w.tm=1+rnd(2);log(`${w.name} locks mutex`,'lp')}else return;
+  return;
+ }
+ if(w.st==='crit'){
+  if(--w.tm>0)return;
+  if(sync){
+   S.buf[S.inI]=w.item;log(`${w.name} placed order #${w.item.id} ${w.item.e} in slot ${S.inI}`,'lp');
+   S.inI=(S.inI+1)%ctl.N;S.mutex=null;S.full++;S.count=S.full;
+  }else{
+   if(S.buf[w.slot]){S.races++;log(`RACE: ${w.name} overwrote order #${S.buf[w.slot].id} in slot ${w.slot}. That order is lost.`,'le')}
+   else log(`${w.name} placed order #${w.item.id} ${w.item.e} in slot ${w.slot}`,'lp');
+   S.buf[w.slot]=w.item;S.inI=(w.slot+1)%ctl.N;
+   const nc=Math.min(ctl.N,w.local+1);if(nc!==S.count+1&&S.count!==w.local)log(`${w.name} wrote stale count=${nc} (was ${S.count} now)`,'le');
+   S.count=nc;
+  }
+  S.prod++;w.item=null;w.st='work';w.tm=wait(ctl.PR);
+ }
+}
+function stepC(w){
+ if(w.st==='work'){if(--w.tm>0)return;w.st='wait'}
+ if(w.st==='wait'){
+  if(sync){
+   if(S.full>0){S.full--;S.count=S.full;w.bl=false;w.st='lock';log(`${w.name} wait(full) → full=${S.full}`,'lc')}else{block(w,'empty');return}
+  }else{
+   if(S.count<=0){block(w,'empty');return}
+   w.bl=false;w.local=S.count;w.slot=S.outI;w.st='crit';w.tm=1+rnd(3);
+   log(`${w.name} reads count=${w.local}, slot=${w.slot} (not locked)`,'lc');return
+  }
+ }
+ if(w.st==='lock'){
+  if(S.mutex===null){S.mutex=w.id;w.st='crit';w.tm=1+rnd(2);log(`${w.name} locks mutex`,'lc')}
+  return;
+ }
+ if(w.st==='crit'){
+  if(--w.tm>0)return;
+  if(sync){
+   const it=S.buf[S.outI];S.buf[S.outI]=null;log(`${w.name} picked up order #${it.id} ${it.e} from slot ${S.outI}`,'lc');
+   S.outI=(S.outI+1)%ctl.N;S.mutex=null;S.empty++;S.cons++;
+  }else{
+   const it=S.buf[w.slot];
+   if(!it){S.races++;log(`RACE: ${w.name} found slot ${w.slot} empty. Another student already took it, so ${w.name} gets a ghost order.`,'le')}
+   else{S.buf[w.slot]=null;S.cons++;log(`${w.name} picked up order #${it.id} ${it.e} from slot ${w.slot}`,'lc')}
+   S.outI=(w.slot+1)%ctl.N;S.count=Math.max(0,w.local-1);
+  }
+  w.st='work';w.tm=wait(ctl.CR);
+ }
+}
+function tick(){
+ S.t++;S.pv=new Set(S.buf.filter(x=>x).map(x=>x.id));
+ const order=[...S.w].sort(()=>Math.random()-.5);
+ for(const w of order)w.type==='P'?stepP(w):stepC(w);
+ S.hist.push([actual(),S.count]);if(S.hist.length>80)S.hist.shift();
+ render();
+}
+function status(w){
+ if(w.st==='work')return `<span class="tag">${w.type==='P'?'cooking':'eating'}</span>`;
+ if(w.st==='wait')return w.bl?`<span class="tag blk">blocked: ${w.type==='P'?'counter full':'counter empty'}</span>`:`<span class="tag">ready</span>`;
+ if(w.st==='lock')return `<span class="tag blk">waiting for mutex</span>`;
+ return `<span class="tag crit">${sync?'in critical section':'updating (unlocked)'}</span>`;
+}
+function render(){
+ $('prods').innerHTML=S.w.filter(w=>w.type==='P').map(w=>`<div class="w P"><span>👩‍🍳 ${w.name}${w.item?' '+w.item.e:''}</span>${status(w)}</div>`).join('');
+ $('cons').innerHTML=S.w.filter(w=>w.type==='C').map(w=>`<div class="w C"><span>🧑‍🎓 ${w.name}</span>${status(w)}</div>`).join('');
+ drawExtra();
+ $('pc').textContent=S.prod+' served up';$('cc').textContent=S.cons+' picked up';
+ const act=actual();$('cap').textContent=act+' / '+ctl.N+' orders';
+ $('slots').innerHTML=S.buf.map((o,i)=>`<div class="slot ${o?'f':''}${o&&S.pv&&!S.pv.has(o.id)?' new':''}">${i===S.inI?'<i class="in">in</i>':''}${i===S.outI?'<i class="out">out</i>':''}${o?`<span class="e">${o.e}</span>#${o.id}`:'empty'}</div>`).join('');
+ const mis=!sync&&S.count!==act;
+ $('sems').innerHTML=sync?
+  `<div class="sem"><small>empty (free slots)</small><strong>${S.empty}</strong></div><div class="sem"><small>full (orders)</small><strong>${S.full}</strong></div><div class="sem"><small>mutex</small><strong>${S.mutex?'locked':'free'}</strong></div><div class="sem"><small>held by</small><strong>${S.mutex?S.w.find(w=>w.id===S.mutex).name:'none'}</strong></div>`:
+  `<div class="sem ${mis?'mis':''}"><small>count variable</small><strong>${S.count}</strong></div><div class="sem"><small>real orders on counter</small><strong>${act}</strong></div><div class="sem ${mis?'mis':''}"><small>counter state</small><strong>${mis?'corrupt':'consistent'}</strong></div><div class="sem"><small>locks</small><strong>none</strong></div>`;
+ $('stats').innerHTML=[['Orders cooked',S.prod],['Orders picked up',S.cons],['Staff blocked (full)',S.blkFull],['Students blocked (empty)',S.blkEmpty]].map(([a,b])=>`<div class="stat"><small>${a}</small><strong>${b}</strong></div>`).join('')+`<div class="stat ${S.races?'err':''}"><small>Race conditions</small><strong>${S.races}</strong></div>`;
+ const L=$('log');L.innerHTML=S.log.slice(-60).map(e=>`<div class="${e.c==='lp'?'lp':e.c==='lc'?'lc':e.c==='le'?'le':'lb'}">[${e.t}] ${e.m}</div>`).join('');L.scrollTop=L.scrollHeight;
+ $('explain').innerHTML=sync?
+  '<b>How it stays safe:</b> a staff member must win <b>wait(empty)</b> before placing an order (blocks when the counter is full). A student must win <b>wait(full)</b> before picking up (blocks when it is empty). The <b>mutex</b> lets only one person change the counter at a time, so no order is overwritten or taken twice.':
+  '<b>Why it breaks:</b> each person reads <b>count</b> and the slot index, takes a moment, then writes back. Two people can read the same values, so one overwrites the other&rsquo;s order, or two students take the same slot. Watch the count variable drift away from the real number of orders.';
+}
+function setRun(on){
+ clearInterval(timer);timer=null;$('run').textContent=on?'Pause':(S.t?'Resume':'Start');
+ if(on)timer=setInterval(tick,1100-ctl.SP*100);
+}
+$('run').onclick=()=>setRun(!timer);
+$('step').onclick=()=>{setRun(false);tick();$('run').textContent='Resume'};
+$('reset').onclick=()=>{setRun(false);init();$('run').textContent='Start'};
+function setMode(s){sync=s;$('mSync').className=s?'on':'';$('mRace').className=s?'':'on bad';setRun(false);init();$('run').textContent='Start'}
+$('mSync').onclick=()=>setMode(true);$('mRace').onclick=()=>setMode(false);
+for(const k of ['N','P','C']) $(k).oninput=()=>{setRun(false);init();$('run').textContent='Start'};
+for(const k of ['PR','CR','SP']) $(k).oninput=()=>{readCtl();if(timer)setRun(true)};
+function preset(n,p,c,pr,cr,s){const v={N:n,P:p,C:c,PR:pr,CR:cr};for(const k in v)$(k).value=v[k];setMode(s);setRun(true)}
+const PS={P:['produce(order)','wait(empty)   // blocks if counter full','wait(mutex)','buffer[in] = order; in = (in+1) % N','signal(mutex)','signal(full)'],
+C:['wait(full)   // blocks if counter empty','wait(mutex)','order = buffer[out]; out = (out+1) % N','signal(mutex)','signal(empty)','consume(order)']};
+const PU={P:['produce(order)','if (count == N) wait','local = count; slot = in   // READ','...another thread can interleave here...','buffer[slot] = order; count = local+1   // WRITE'],
+C:['if (count == 0) wait','local = count; slot = out   // READ','...another thread can interleave here...','item = buffer[slot]; count = local-1   // WRITE','consume(item)']};
+function lineOf(w){if(w.type==='P'){if(sync)return{work:0,wait:1,lock:2,crit:3}[w.st];return{work:0,wait:1,crit:3}[w.st]}
+ if(sync)return{wait:0,lock:1,crit:2,work:5}[w.st];return{wait:0,crit:2,work:4}[w.st]}
+function drawExtra(){
+ const W=600,H=130,N=ctl.N,h=S.hist,d=Math.max(h.length-1,1);
+ const pts=k=>h.map((p,i)=>(i/d*W).toFixed(1)+','+(H-12-(Math.min(p[k],N)/N)*(H-24)).toFixed(1)).join(' ');
+ $('chart').innerHTML='<line x1="0" x2="600" y1="12" y2="12" style="stroke:var(--line);stroke-width:2" stroke-dasharray="6 4" vector-effect="non-scaling-stroke"/>'+(h.length>1?(sync?'':'<polyline points="'+pts(1)+'" fill="none" style="stroke:var(--bad);stroke-width:2" stroke-dasharray="5 3" vector-effect="non-scaling-stroke"/>')+'<polyline points="'+pts(0)+'" fill="none" style="stroke:var(--prod);stroke-width:3" vector-effect="non-scaling-stroke"/>':'');
+ $('legc').innerHTML=sync?'':'<i style="background:var(--bad)"></i>count variable (what the code believes)';
+ const src=sync?PS:PU;
+ const mk=(t,cls,title)=>{const L=src[t];return '<div class="pc '+cls+'"><h3>'+title+'</h3>'+L.map((x,i)=>{const who=S.w.filter(w=>w.type===t&&lineOf(w)===i);const bad=who.some(w=>w.bl||w.st==='lock');return '<div class="ln'+(who.length?' hot':'')+(bad?' bad':'')+'"><span>'+x.replace(/</g,'&lt;')+'</span><em>'+who.map(w=>w.name).join(', ')+'</em></div>'}).join('')+'</div>'};
+ $('code').innerHTML=mk('P','','Canteen staff (producer)')+mk('C','cc','Student (consumer)');
+}
+function autotest(){
+ const was=sync,rows=[];setRun(false);
+ for(const m of [true,false]){sync=m;init();for(let i=0;i<300;i++)tick();
+  const a=actual(),ok=S.prod-S.cons===a&&S.races===0;
+  rows.push('<tr><td>'+(m?'Semaphores + mutex':'No synchronization')+'</td><td>'+S.prod+'</td><td>'+S.cons+'</td><td>'+a+'</td><td>'+S.races+'</td><td>'+S.blkFull+' / '+S.blkEmpty+'</td><td class="'+(ok?'pass':'fail')+'">'+(ok?'PASS':'FAIL')+'</td></tr>')}
+ $('testout').innerHTML='<table><tr><th>Mode</th><th>Cooked</th><th>Picked up</th><th>On counter</th><th>Races</th><th>Blocked (full / empty)</th><th>Result</th></tr>'+rows.join('')+'</table>';
+ setMode(was);
+}
+init();
+</script></body></html>
